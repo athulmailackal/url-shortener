@@ -45,6 +45,18 @@
     });
   }
 
+  // The backend's `shortUrl` field is sometimes returned as a relative path
+  // (e.g. "/peepu") rather than a full absolute URL. Normalize it to an
+  // absolute URL against the current origin so copy/open/display always work,
+  // without ever changing what the backend actually sends.
+  function resolveShortUrl(item) {
+    const raw = (item && item.shortUrl) || "";
+    if (/^https?:\/\//i.test(raw)) return raw;
+
+    const path = (raw || item.shortCode || "").replace(/^\/+/, "");
+    return window.location.origin + "/" + path;
+  }
+
   function isExpired(expiresAt) {
     if (!expiresAt) return false;
     const d = new Date(expiresAt);
@@ -246,14 +258,16 @@
   }
 
   function renderResult(data) {
-    $("result-short-url").href = data.shortUrl;
-    $("result-short-url").textContent = data.shortUrl;
+    const shortUrl = resolveShortUrl(data);
+    $("result-short-url").href = shortUrl;
+    $("result-short-url").textContent = shortUrl;
     $("result-original-url").textContent = data.originalUrl;
     $("result-original-url").title = data.originalUrl;
     $("result-clicks").textContent = data.clickCount ?? 0;
     $("result-expires").textContent = formatDateTime(data.expiresAt);
 
     $("result-stats-btn").dataset.shortCode = data.shortCode;
+    $("result-copy").dataset.url = shortUrl;
 
     $("result-card").hidden = false;
     $("result-card").scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -338,7 +352,7 @@
       ? '<span class="status-pill expired">Expired</span>'
       : '<span class="status-pill active">Active</span>';
 
-    const shortUrl = item.shortUrl || "";
+    const shortUrl = resolveShortUrl(item);
     const originalUrl = item.originalUrl || "";
 
     return `
@@ -428,7 +442,7 @@
         </div>
         <div class="stat-item full">
           <dt>Short URL</dt>
-          <dd>${escapeHtml(data.shortUrl || "")}</dd>
+          <dd>${escapeHtml(resolveShortUrl(data))}</dd>
         </div>
         <div class="stat-item full">
           <dt>Original URL</dt>
@@ -558,15 +572,9 @@
     });
 
     $("result-copy").addEventListener("click", (e) => {
-      const url = $("result-short-url").textContent.trim();
-
-      if (!url) {
-          toast("No URL to copy.", "error");
-          return;
-      }
-
+      const url = e.currentTarget.dataset.url;
       copyToClipboard(url, e.currentTarget);
-        });
+    });
 
     $("result-stats-btn").addEventListener("click", (e) => {
       const shortCode = e.currentTarget.dataset.shortCode;
