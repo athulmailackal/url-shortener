@@ -254,7 +254,6 @@
     $("result-expires").textContent = formatDateTime(data.expiresAt);
 
     $("result-stats-btn").dataset.shortCode = data.shortCode;
-    $("result-copy").dataset.url = data.shortUrl;
 
     $("result-card").hidden = false;
     $("result-card").scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -559,9 +558,15 @@
     });
 
     $("result-copy").addEventListener("click", (e) => {
-      const url = e.currentTarget.dataset.url;
+      const url = $("result-short-url").textContent.trim();
+
+      if (!url) {
+          toast("No URL to copy.", "error");
+          return;
+      }
+
       copyToClipboard(url, e.currentTarget);
-    });
+        });
 
     $("result-stats-btn").addEventListener("click", (e) => {
       const shortCode = e.currentTarget.dataset.shortCode;
